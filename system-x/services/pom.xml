@@ -27,6 +27,7 @@
         <module>http</module>
         <module>kafka</module>
         <module>infinispan</module>
+        <module>mail</module>
         <module>db</module>
         <module>elasticsearch</module>
         <module>filesystem</module>
