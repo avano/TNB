@@ -21,9 +21,9 @@ jobs:
           mvn -q compile dependency:resolve -DappendOutput=true -DoutputFile=head.log
       - name: Checkout main
         uses: actions/checkout@v3
-          with:
-            ref: 'main'
-      - name: Create list of dependencies from PR
+        with:
+          ref: 'main'
+      - name: Create list of dependencies from main
         run: |
           mvn -q compile dependency:resolve -DappendOutput=true -DoutputFile=main.log
       - name: Create comment body
