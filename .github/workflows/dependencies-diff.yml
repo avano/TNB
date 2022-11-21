@@ -1,0 +1,36 @@
+name: Dependencies diff
+on: pull_request
+
+env:
+  GITHUB_TOKEN: ${{ secrets.PAT }}
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    name: Dependencies diff
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+      - name: Create list of dependencies from PR
+        run: |
+          mvn -q compile dependency:resolve -DappendOutput=true -DoutputFile=head.log
+      - name: Checkout main
+        uses: actions/checkout@v3
+        with:
+          ref: 'main'
+      - name: Create list of dependencies from main
+        run: |
+          mvn -q compile dependency:resolve -DappendOutput=true -DoutputFile=main.log
+      - name: Create comment body
+        run: |
+          printf "Dependencies diff:\n\`\`\`\n%s\n\`\`\`" "$(diff head.log main.log)" > diff.txt
+      - name: Add comment
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-path: diff.txt
+
