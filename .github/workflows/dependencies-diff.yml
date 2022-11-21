@@ -28,6 +28,12 @@ jobs:
           mvn -q compile dependency:resolve -DappendOutput=true -DoutputFile=main.log
       - name: Create comment body
         run: |
+          echo "Head"
+          cat head.log
+          echo "Main"
+          cat main.log
+          echo "Diff"
+          diff head.log main.log
           printf "Dependencies diff:\n\`\`\`\n%s\n\`\`\`" "$(diff head.log main.log)" > diff.txt
       - name: Add comment
         uses: mshick/add-pr-comment@v2
