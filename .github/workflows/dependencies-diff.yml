@@ -1,8 +1,5 @@
 name: Dependencies diff
-on:
-  pull_request:
-    branches:
-      - 'dependabot/**'
+on: pull_request
 
 env:
   GITHUB_TOKEN: ${{ secrets.PAT }}
@@ -24,10 +21,10 @@ jobs:
       - name: Create diff
         run: |
           # resolve all dependencies from the HEAD of this PR
-          mvn dependency:resolve -DappendOutput=true -DoutputFile=head.log
+          mvn compile dependency:resolve -DappendOutput=true -DoutputFile=head.log
           git checkout main
           # resolve all dependencies from the HEAD of this PR
-          mvn dependency:resolve -DappendOutput=true -DoutputFile=main.log
+          mvn compile dependency:resolve -DappendOutput=true -DoutputFile=main.log
           printf "Dependencies diff:\n\`\`\`\n%s\n\`\`\`" "$(diff head.log main.log)" > diff.txt
       - name: Add comment
         uses: mshick/add-pr-comment@v2
