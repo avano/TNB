@@ -26,11 +26,13 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
-import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
+import io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder;
 import io.fabric8.kubernetes.client.LocalPortForward;
 
 @AutoService(Cassandra.class)
 public class OpenshiftCassandra extends Cassandra implements OpenshiftDeployable, WithName, WithInClusterHostname, WithExternalHostname {
+    private static final int INTERNAL_PORT = 7000;
+    private static final String INTERNAL_PORT_NAME = "internal";
 
     private CqlSession session;
     private LocalPortForward portForward;
@@ -39,50 +41,75 @@ public class OpenshiftCassandra extends Cassandra implements OpenshiftDeployable
     @Override
     public void create() {
         //@formatter:off
-        OpenshiftClient.get().apps().deployments().createOrReplace(
-
-            new DeploymentBuilder()
+        OpenshiftClient.get().apps().statefulSets().createOrReplace(
+            new StatefulSetBuilder()
                 .withNewMetadata()
                     .withName(name())
                     .addToLabels(OpenshiftConfiguration.openshiftDeploymentLabel(), name())
                 .endMetadata()
-                .editOrNewSpec()
-                    .editOrNewSelector()
-                        .addToMatchLabels(OpenshiftConfiguration.openshiftDeploymentLabel(), name())
-                    .endSelector()
-                    .withReplicas(1)
-                    .editOrNewTemplate()
-                        .editOrNewMetadata()
-                            .addToLabels(OpenshiftConfiguration.openshiftDeploymentLabel(), name())
-                        .endMetadata()
-                        .withNewSpec()
-                            .addNewContainer()
-                                .withName(name())
-                                .withImage(image())
-                                .addAllToEnv(containerEnvironment().entrySet().stream().map(e -> new EnvVar(e.getKey(), e.getValue(), null))
-                                    .collect(Collectors.toList()))
-                                .addNewPort()
-                                    .withContainerPort(port())
+                    .editOrNewSpec()
+                        .editOrNewSelector()
+                            .addToMatchLabels(OpenshiftConfiguration.openshiftDeploymentLabel(), name())
+                        .endSelector()
+                        .withReplicas(getConfiguration().getReplicas())
+                        .editOrNewTemplate()
+                            .editOrNewMetadata()
+                                .addToLabels(OpenshiftConfiguration.openshiftDeploymentLabel(), name())
+                            .endMetadata()
+                            .withNewSpec()
+                                .addNewContainer()
                                     .withName(name())
-                                .endPort()
-                                .withImagePullPolicy("IfNotPresent")
-                                .withNewReadinessProbe()
-                                    .withNewTcpSocket()
-                                        .withNewPort(name())
-                                    .endTcpSocket()
-                                    .withInitialDelaySeconds(30) // cannot go much lower before seeing issues
-                                    .withTimeoutSeconds(5)
-                                    .withFailureThreshold(6)
-                                .endReadinessProbe()
-                            .endContainer()
-                        .endSpec()
-                    .endTemplate()
-                .endSpec()
+                                    .withImage(image())
+                                    .addAllToEnv(containerEnvironment().entrySet().stream().map(e -> new EnvVar(e.getKey(), e.getValue(), null))
+                                        .collect(Collectors.toList()))
+                                    .addNewPort()
+                                        .withContainerPort(port())
+                                        .withName(name())
+                                    .endPort()
+                                    .addNewPort()
+                                        .withContainerPort(INTERNAL_PORT)
+                                        .withName(INTERNAL_PORT_NAME)
+                                    .endPort()
+                                    .withImagePullPolicy("IfNotPresent")
+                                    .withNewReadinessProbe()
+                                        .withNewTcpSocket()
+                                            .withNewPort(name())
+                                        .endTcpSocket()
+                                        .withInitialDelaySeconds(30) // cannot go much lower before seeing issues
+                                        .withTimeoutSeconds(5)
+                                        .withFailureThreshold(6)
+                                    .endReadinessProbe()
+                                .endContainer()
+                            .endSpec()
+                        .endTemplate()
+                    .endSpec()
                 .build()
         );
-        //@formatter:on
 
-        //@formatter:off
+        for (int i = 0; i < getConfiguration().getReplicas(); i++) {
+            OpenshiftClient.get().services().createOrReplace(
+                new ServiceBuilder()
+                    .withNewMetadata()
+                        .withName(name() + "-" + i)
+                        .addToLabels(OpenshiftConfiguration.openshiftDeploymentLabel(), name())
+                    .endMetadata()
+                    .withNewSpec()
+                        .addToSelector("statefulset.kubernetes.io/pod-name", name() + "-" + i)
+                        .addNewPort()
+                            .withName(name())
+                            .withPort(port())
+                            .withTargetPort(new IntOrString(port()))
+                        .endPort()
+                        .addNewPort()
+                            .withName(INTERNAL_PORT_NAME)
+                            .withPort(INTERNAL_PORT)
+                            .withTargetPort(new IntOrString(INTERNAL_PORT))
+                        .endPort()
+                    .endSpec()
+                    .build()
+            );
+        }
+
         OpenshiftClient.get().services().createOrReplace(
             new ServiceBuilder()
                 .withNewMetadata()
@@ -100,7 +127,6 @@ public class OpenshiftCassandra extends Cassandra implements OpenshiftDeployable
                 .build()
         );
         //@formatter:on
-
     }
 
     @Override
@@ -121,7 +147,10 @@ public class OpenshiftCassandra extends Cassandra implements OpenshiftDeployable
     @Override
     public void undeploy() {
         OpenshiftClient.get().services().withName(name()).delete();
-        OpenshiftClient.get().apps().deployments().withName(name()).delete();
+        for (int i = 0; i < getConfiguration().getReplicas(); i++) {
+            OpenshiftClient.get().services().withName(name() + "-" + i).delete();
+        }
+        OpenshiftClient.get().apps().statefulSets().withName(name()).delete();
         OpenShiftWaiters.get(OpenshiftClient.get(), () -> false)
             .areNoPodsPresent(OpenshiftConfiguration.openshiftDeploymentLabel(), name()).timeout(120_000).waitFor();
     }
@@ -158,8 +187,9 @@ public class OpenshiftCassandra extends Cassandra implements OpenshiftDeployable
     @Override
     public boolean isReady() {
         List<Pod> pods = OpenshiftClient.get().getLabeledPods(OpenshiftConfiguration.openshiftDeploymentLabel(), name());
-        if (ResourceFunctions.areExactlyNPodsReady(1).apply(pods)) {
-            return OpenshiftClient.get().getLogs(pods.get(0)).contains("Startup complete");
+        if (ResourceFunctions.areExactlyNPodsReady(getConfiguration().getReplicas()).apply(pods)) {
+            return pods.stream().filter(p -> OpenshiftClient.get().getLogs(p).contains("Startup complete")).count()
+                == getConfiguration().getReplicas();
         }
         return false;
     }
@@ -177,5 +207,10 @@ public class OpenshiftCassandra extends Cassandra implements OpenshiftDeployable
     @Override
     public String externalHostname() {
         return "localhost";
+    }
+
+    @Override
+    public long waitTime() {
+        return 300_000L * getConfiguration().getReplicas();
     }
 }

@@ -2,20 +2,26 @@ package software.tnb.db.cassandra.service;
 
 import software.tnb.common.account.AccountFactory;
 import software.tnb.common.deployment.WithDockerImage;
-import software.tnb.common.service.Service;
+import software.tnb.common.service.ConfigurableService;
 import software.tnb.db.cassandra.account.CassandraAccount;
+import software.tnb.db.cassandra.service.configuration.CassandraConfiguration;
 import software.tnb.db.cassandra.validation.CassandraValidation;
 
 import com.datastax.oss.driver.api.core.CqlSession;
 
 import java.util.Map;
 
-public abstract class Cassandra implements Service, WithDockerImage {
+public abstract class Cassandra extends ConfigurableService<CassandraConfiguration> implements WithDockerImage {
 
     public static final int CASSANDRA_PORT = 9042;
 
     private CassandraValidation validation;
     private CassandraAccount account;
+
+    public Cassandra() {
+        // Default configuration
+        getConfiguration().replicas(1);
+    }
 
     public String defaultImage() {
         // official library image required hacks in openshift, bitnami works out of the box
@@ -43,7 +49,10 @@ public abstract class Cassandra implements Service, WithDockerImage {
         return Map.of(
             "CASSANDRA_USER", account().username(),
             "CASSANDRA_PASSWORD", account().password(),
-            "CASSANDRA_PASSWORD_SEEDER", "yes"
+            "CASSANDRA_PASSWORD_SEEDER", "yes",
+            "CASSANDRA_SEEDS", "cassandra-0,cassandra-1",
+            "MAX_HEAP_SIZE", "256M",
+            "HEAP_NEWSIZE", "128M"
         );
     }
 
