@@ -1,9 +1,11 @@
 
 package software.tnb.kafka.resource.local;
 
+import org.apache.commons.lang3.StringUtils;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.utility.TestcontainersConfiguration;
 
 public class StrimziContainer extends GenericContainer<StrimziContainer> {
 
@@ -22,6 +24,11 @@ public class StrimziContainer extends GenericContainer<StrimziContainer> {
             }
         );
 
+        String listenerAddress = "localhost";
+        String dockerHost = TestcontainersConfiguration.getInstance().getEnvironment().get("DOCKER_HOST");
+        if (dockerHost != null) {
+            listenerAddress = StringUtils.substringBetween(dockerHost, "tcp://", ":2375");
+        }
         withExposedPorts(KAFKA_PORT);
         addFixedExposedPort(KAFKA_PORT, KAFKA_PORT);
         withEnv("LOG_DIR", "/tmp/log");
@@ -29,7 +36,7 @@ public class StrimziContainer extends GenericContainer<StrimziContainer> {
                 + "--override zookeeper.connect=%s:%d "
                 + "--override advertised.listeners=PLAINTEXT://%s:%d",
             ZookeeperContainer.CONTAINER_NAME, ZookeeperContainer.ZOOKEEPER_PORT,
-            "localhost", KAFKA_PORT));
+            listenerAddress, KAFKA_PORT));
 
         waitingFor(Wait.forListeningPort());
     }
