@@ -8,7 +8,7 @@ import org.apache.commons.io.IOUtils;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,8 +32,9 @@ public final class SpringBootIntegrationBuilder extends AbstractMavenGitIntegrat
 
     public SpringBootIntegrationBuilder fromSpringBootXmlCamelContext(String camelContextPath) {
         String resourceData;
+        System.out.println(camelContextPath);
         try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(camelContextPath)) {
-            resourceData = IOUtils.toString(is, StandardCharsets.UTF_8);
+            resourceData = IOUtils.toString(is, Charset.defaultCharset());
         } catch (IOException e) {
             throw new RuntimeException("Unable to read resource: ", e);
         }
