@@ -1,6 +1,7 @@
 package software.tnb.product.cq.application;
 
 import software.tnb.common.config.TestConfiguration;
+import software.tnb.common.utils.HTTPUtils;
 import software.tnb.common.utils.WaitUtils;
 import software.tnb.product.cq.configuration.QuarkusConfiguration;
 import software.tnb.product.endpoint.Endpoint;
@@ -18,7 +19,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class LocalQuarkusApp extends QuarkusApp {
     private static final Logger LOG = LoggerFactory.getLogger(LocalQuarkusApp.class);
@@ -29,7 +29,7 @@ public class LocalQuarkusApp extends QuarkusApp {
         super(integrationBuilder);
 
         this.integrationBuilder = integrationBuilder;
-        endpoint = new Endpoint(() -> "http://localhost:" + integrationBuilder.getPort());
+        endpoint = new Endpoint(() -> integrationBuilder.getPort() == 0 ? null : "http://localhost:" + integrationBuilder.getPort());
     }
 
     @Override
@@ -64,14 +64,14 @@ public class LocalQuarkusApp extends QuarkusApp {
             if (appProcess.isAlive()) {
                 LOG.debug("Killing integration process");
                 appProcess.destroy();
-                WaitUtils.waitFor(() -> !isReady(), 600, 100, "Waiting until the process is stopped");
+                WaitUtils.waitFor(() -> !appProcess.isAlive(), 600, 100, "Waiting until the process is stopped");
             }
         }
     }
 
     @Override
     public boolean isReady() {
-        return appProcess.isAlive();
+        return appProcess.isAlive() && (getEndpoint() == null || HTTPUtils.getInstance().get(getEndpoint(), false).isSuccessful());
     }
 
     @Override
@@ -88,7 +88,7 @@ public class LocalQuarkusApp extends QuarkusApp {
             fileName = integrationTarget.resolve(name + "-1.0.0-SNAPSHOT-runner").toAbsolutePath().toString();
         } else {
             List<String> args = this.integrationBuilder.getProperties() != null ? this.integrationBuilder.getProperties().entrySet().stream()
-                .map(e -> "-D" + e.getKey() + "=" + e.getValue()).collect(Collectors.toList()) : Collections.emptyList();
+                .map(e -> "-D" + e.getKey() + "=" + e.getValue()).toList() : Collections.emptyList();
 
             cmd.add(System.getProperty("java.home") + "/bin/java");
             cmd.addAll(args);

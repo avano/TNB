@@ -176,9 +176,11 @@ public final class IntegrationGenerator {
             new CamelMainCustomizer(),
             // for camel-k expose the configured port using trait, so that app.getEndpoint() can be used
             new TraitCustomizer(traits -> {
-                Container container = traits.getContainer() == null ? new Container() : traits.getContainer();
-                container.setServicePort((long) integrationBuilder.getPort());
-                traits.setContainer(container);
+                if (integrationBuilder.getPort() != 0) {
+                    Container container = traits.getContainer() == null ? new Container() : traits.getContainer();
+                    container.setServicePort((long) integrationBuilder.getPort());
+                    traits.setContainer(container);
+                }
             })
         );
 

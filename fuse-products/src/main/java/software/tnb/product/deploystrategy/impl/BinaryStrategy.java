@@ -107,7 +107,7 @@ public class BinaryStrategy extends OpenshiftBaseDeployer {
                 , "--allow-missing-imagestream-tags=true"
             ));
 
-            if (integrationBuilder.getPort() != 8080) {
+            if (integrationBuilder.getPort() != 0) {
                 LOG.debug("patch service with port {}", integrationBuilder.getPort());
                 fileWriter.append(binary.execute("patch", "service", name, "--type=json"
                     , "-p", "[{\"op\": \"replace\", \"path\": \"/spec/ports/0/port\", \"value\":" + integrationBuilder.getPort() + "}]"

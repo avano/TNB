@@ -24,6 +24,9 @@ public class RestCustomizer extends ProductsCustomizer implements IntegrationSpe
         getIntegrationBuilder().addToProperties("quarkus.camel.servlet.url-patterns", "/camel/*");
         getIntegrationBuilder().addToProperties("quarkus.openshift.route.expose", "true");
         getIntegrationBuilder().dependencies("rest");
+        if (getIntegrationBuilder().getPort() == 0) {
+            getIntegrationBuilder().port(8080);
+        }
     }
 
     @Override
@@ -35,6 +38,9 @@ public class RestCustomizer extends ProductsCustomizer implements IntegrationSpe
                 .dependencies(
                     Maven.createDependency("org.springframework.boot:spring-boot-starter-undertow")
                 );
+        }
+        if (getIntegrationBuilder().getPort() == 0) {
+            getIntegrationBuilder().port(8080);
         }
     }
 

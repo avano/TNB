@@ -59,7 +59,7 @@ public class CustomJKubeStrategy extends OpenshiftCustomDeployer {
             && ((AbstractMavenGitIntegrationBuilder<?>) integrationBuilder).getMavenProperties() != null) {
             mvnProps = ((AbstractMavenGitIntegrationBuilder<?>) integrationBuilder).getMavenProperties();
         }
-        final Map<String, String> ompProperties = Map.of(
+        final Map<String, String> ompProperties = new HashMap<>(Map.of(
             "skipTests", "true"
             , "openshift-maven-plugin-version", SpringBootConfiguration.openshiftMavenPluginVersion()
             , "openshift-maven-plugin-group-id", SpringBootConfiguration.openshiftMavenPluginGroupId()
@@ -68,9 +68,13 @@ public class CustomJKubeStrategy extends OpenshiftCustomDeployer {
                 : OpenshiftClient.get().getMasterUrl().toString()
             , "jkube.username", OpenshiftConfiguration.openshiftUsername()
             , "jkube.generator.from", SpringBootConfiguration.openshiftBaseImage()
-            , "jkube.enricher.jkube-service.port", String.format("%s:%s", integrationBuilder.getPort(), integrationBuilder.getPort())
-            , "jkube.enricher.jkube-service.expose", "true"
-        );
+        ));
+        if (integrationBuilder.getPort() != 0) {
+            ompProperties.putAll(Map.of(
+                "jkube.enricher.jkube-service.port", String.format("%s:%s", integrationBuilder.getPort(), integrationBuilder.getPort()),
+                "jkube.enricher.jkube-service.expose", "true"
+            ));
+        }
         final BuildRequest.Builder requestBuilder = new BuildRequest.Builder()
             .withBaseDirectory(baseDirectory)
             .withProperties(Stream.concat(ompProperties.entrySet().stream()

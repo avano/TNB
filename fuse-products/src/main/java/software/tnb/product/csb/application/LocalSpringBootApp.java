@@ -1,6 +1,7 @@
 package software.tnb.product.csb.application;
 
 import software.tnb.common.config.TestConfiguration;
+import software.tnb.common.utils.HTTPUtils;
 import software.tnb.common.utils.WaitUtils;
 import software.tnb.product.endpoint.Endpoint;
 import software.tnb.product.integration.builder.AbstractIntegrationBuilder;
@@ -62,7 +63,7 @@ public class LocalSpringBootApp extends SpringBootApp {
 
         command.add(fileName);
 
-        endpoint = new Endpoint(() -> "http://localhost:" + integrationBuilder.getPort());
+        endpoint = new Endpoint(() -> integrationBuilder.getPort() == 0 ? null : "http://localhost:" + integrationBuilder.getPort());
     }
 
     @Override
@@ -106,7 +107,7 @@ public class LocalSpringBootApp extends SpringBootApp {
 
     @Override
     public boolean isReady() {
-        return appProcess != null && appProcess.isAlive();
+        return appProcess.isAlive() && (getEndpoint() == null || HTTPUtils.getInstance().get(getEndpoint(), false).isSuccessful());
     }
 
     @Override
