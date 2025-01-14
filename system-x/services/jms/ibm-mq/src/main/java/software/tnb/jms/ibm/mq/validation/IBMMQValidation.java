@@ -84,7 +84,12 @@ public class IBMMQValidation implements Validation {
             err = output.getError();
         } else {
             try {
-                final Container.ExecResult result = container.execInContainer("/bin/bash", "-c", command);
+                Container.ExecResult result;
+                try {
+                    result = container.execInContainer("/bin/bash", "-c", command);
+                } catch (Exception e) {
+                    result = container.execInContainer("/bin/bash", "-c", command);
+                }
                 out = result.getStdout();
                 err = result.getStderr();
             } catch (Exception e) {
