@@ -14,6 +14,7 @@ public class DBContainer extends GenericContainer<DBContainer> {
         withExposedPorts(port);
         withEnv(service.containerEnvironment());
         waitingFor(waitStrategy);
+        withStartupAttempts(2);
     }
 
     public int getPort() {
