@@ -170,6 +170,20 @@ public abstract class App {
             command.add("--kamelets-version");
             command.add(TestConfiguration.kameletsVersion());
         }
+        
+        if (TestConfiguration.mavenRepository() != null) {
+            command.add("--repos");
+            command.add(TestConfiguration.mavenRepository());
+        }
+
+        if (TestConfiguration.mavenSettings() != null) {
+            command.add("--maven-settings");
+            command.add(TestConfiguration.mavenSettings());
+        }
+
+        if (TestConfiguration.mavenExtraArgs() != null && !TestConfiguration.mavenExtraArgs().isEmpty()) {
+            command.add(TestConfiguration.mavenExtraArgs());
+        }
 
         if (!integrationBuilder.getDependencies().isEmpty()) {
             command.add("--dep");
