@@ -14,7 +14,7 @@
     <name>TNB :: System-X :: Services :: Kafka</name>
 
     <properties>
-        <strimzi.api.version>0.37.0</strimzi.api.version>
+        <strimzi.api.version>0.46.1</strimzi.api.version>
         <kafka.client.version>4.0.0</kafka.client.version>
     </properties>
 
