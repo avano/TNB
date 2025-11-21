@@ -17,7 +17,7 @@
     <properties>
         <azure.core.version>1.57.0</azure.core.version>
         <!-- There is some issue with the latest 1.15.3 version, so pin this version until it stops working -->
-        <azure.core.netty.http.version>1.13.11</azure.core.netty.http.version>
+        <azure.core.netty.http.version>1.16.2</azure.core.netty.http.version>
     </properties>
 
     <dependencies>
