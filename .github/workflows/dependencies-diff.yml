@@ -4,6 +4,7 @@ on:
     paths:
       - '**/pom.xml'
 
+
 jobs:
   diff:
     runs-on: ubuntu-latest
