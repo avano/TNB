@@ -80,6 +80,7 @@
          -->
         <kubernetes.client.version>7.5.0</kubernetes.client.version>
         <javaparser.version>3.28.0</javaparser.version>
+
         <maven.compiler.plugin.version>3.14.0</maven.compiler.plugin.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
