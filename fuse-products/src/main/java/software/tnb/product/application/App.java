@@ -11,9 +11,9 @@ import software.tnb.product.integration.builder.AbstractIntegrationBuilder;
 import software.tnb.product.integration.generator.IntegrationGenerator;
 import software.tnb.product.log.Log;
 import software.tnb.product.log.OpenshiftLog;
+import software.tnb.product.log.artifacts.Artifacts;
 import software.tnb.product.log.stream.FileLogStream;
 import software.tnb.product.log.stream.LogStream;
-import software.tnb.product.rp.Attachments;
 import software.tnb.product.util.maven.Maven;
 
 import org.apache.commons.io.FileUtils;
@@ -261,6 +261,9 @@ public abstract class App {
 
         LOG.trace("Camel CLI command: {}", String.join(" ", command));
 
+        // add the logfile to the artifacts, in case of no error, it is removed later
+        Artifacts.add(logFile.toPath());
+
         try {
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.redirectOutput(logFile);
@@ -277,15 +280,17 @@ public abstract class App {
             generateLogStream.stop();
         }
 
-        Attachments.addAttachment(logFile.toPath());
-
         if (!hasExited) {
             throw new RuntimeException("camel export invocation did not end in 1 hour, check " + logFile + " for more details");
         }
 
         if (exitCode != 0) {
+            Artifacts.add(logFile.toPath());
             throw new RuntimeException("camel export invocation failed with exit code " + exitCode + ", check " + logFile + " for more details");
         }
+
+        // no error, remove the log file from artifacts
+        Artifacts.remove(logFile.toPath());
 
         IntegrationGenerator.createResourceFiles(integrationBuilder, appDir);
     }
