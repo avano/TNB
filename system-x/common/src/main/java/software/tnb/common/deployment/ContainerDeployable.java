@@ -47,6 +47,7 @@ public interface ContainerDeployable<T extends GenericContainer<?>> extends Depl
         try {
             container().start();
         } catch (ContainerLaunchException e) {
+            LOG.error("Container logs:\n{}", container().getLogs());
             throw e;
         }
         LOG.info("{} container started", serviceName());
